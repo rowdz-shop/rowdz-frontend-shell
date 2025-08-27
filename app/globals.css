@@ -1,0 +1,4 @@
+/* estilos globais mínimos */
+:root { color-scheme: light dark; }
+html, body { margin: 0; padding: 0; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
