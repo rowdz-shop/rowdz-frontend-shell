@@ -1,0 +1,42 @@
+name: ci-cd-frontend
+on:
+  push:
+    branches: [ main ]
+    paths: [ "app/**", "components/**", "package.json", "next.config.js", ".github/workflows/**" ]
+  pull_request:
+    branches: [ main ]
+concurrency: { group: frontend-ci, cancel-in-progress: true }
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with: { name: site, path: out }
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: site, path: out }
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Sync to S3
+        run: aws s3 sync out s3://${{ vars.S3_BUCKET }} --delete --cache-control max-age=31536000,public
+      - name: Upload index.html (short cache)
+        run: aws s3 cp out/index.html s3://${{ vars.S3_BUCKET }}/index.html --cache-control max-age=60,public
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.CF_DISTRIBUTION_ID }} --paths "/*"
