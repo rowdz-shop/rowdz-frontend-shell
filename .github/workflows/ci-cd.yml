@@ -5,6 +5,7 @@ on:
     paths: [ "app/**", "components/**", "package.json", "next.config.js", ".github/workflows/**" ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch: {}
 concurrency: { group: frontend-ci, cancel-in-progress: true }
 permissions:
   contents: read
